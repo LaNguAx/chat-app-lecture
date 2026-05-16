@@ -23,8 +23,17 @@ export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
 );
 
 // TODO (hands-on): emit SOCKET_EVENTS.JOIN_ROOM with { username, room }
+// TODO (hands-on): emit SOCKET_EVENTS.LEAVE_ROOM with { username, room } when the
+//   user clicks "Leave" so the server can broadcast USER_LEFT without
+//   tearing down the underlying socket.
 // TODO (hands-on): emit SOCKET_EVENTS.SEND_MESSAGE with { username, room, text }
+// TODO (hands-on): listen for SOCKET_EVENTS.ROOM_JOINED and seed the message
+//   list with `payload.history` so a user joining an existing room sees
+//   the messages that were sent before they arrived.
 // TODO (hands-on): listen for SOCKET_EVENTS.NEW_MESSAGE and append messages to state
 // TODO (hands-on): listen for SOCKET_EVENTS.USER_JOINED / USER_LEFT to render system messages
 // TODO (hands-on, optional): emit and listen for typing_started / typing_stopped
 // TODO (hands-on): listen for SOCKET_EVENTS.ERROR_MESSAGE and surface to the UI
+// TODO (hands-on): expose a connect/disconnect toggle in the UI that calls
+//   `socket.connect()` / `socket.disconnect()`. Useful for demonstrating
+//   the lifecycle live during the lecture.

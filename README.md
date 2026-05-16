@@ -87,8 +87,19 @@ In the exercise, we will implement:
 - Client emits `send_message`
 - Server broadcasts `new_message` to the room
 - Client listens for `new_message`
-- Server handles disconnects (broadcasts `user_left`)
 - Server broadcasts `user_joined` to the room
+- **Explicit room exit**: client emits `leave_room` when the user clicks
+  "Leave"; server broadcasts `user_left` to the remaining members of
+  that room (without disconnecting the socket).
+- Server also broadcasts `user_left` on socket `disconnect` (closed tab,
+  network drop, "Disconnect" button).
+- **Connect / disconnect button**: a UI toggle that calls
+  `socket.connect()` / `socket.disconnect()` so students can see the
+  lifecycle and the resulting `user_left` broadcast live.
+- **Chat history on join**: server keeps a per-room message buffer and
+  sends it to a new joiner inside `room_joined.history`; the client
+  renders that history so a late joiner sees what was said before they
+  arrived.
 - Optional: typing indicators (`typing_started` / `typing_stopped`)
 - Optional: simple error feedback via `error_message`
 

@@ -15,6 +15,7 @@ export const SOCKET_EVENTS = {
 
   // Application events for this lecture.
   JOIN_ROOM: "join_room",
+  LEAVE_ROOM: "leave_room",
   ROOM_JOINED: "room_joined",
   USER_JOINED: "user_joined",
   USER_LEFT: "user_left",
@@ -43,10 +44,23 @@ export type JoinRoomPayload = {
   username: string;
 };
 
-/** Server confirmation that the client successfully joined a room. */
+/** Payload sent by a client when it wants to leave a room without disconnecting. */
+export type LeaveRoomPayload = {
+  room: string;
+  username: string;
+};
+
+/**
+ * Server confirmation that the client successfully joined a room.
+ *
+ * `history` carries the existing chat messages for the room so a user
+ * who joins an in-progress conversation immediately sees what was said
+ * before they arrived.
+ */
 export type RoomJoinedPayload = {
   room: string;
   username: string;
+  history: ChatMessage[];
 };
 
 /** Lightweight notification when another user joins or leaves a room. */
@@ -93,6 +107,7 @@ export type ServerToClientEvents = {
 /** Strongly typed events the client emits to the server. */
 export type ClientToServerEvents = {
   [SOCKET_EVENTS.JOIN_ROOM]: (payload: JoinRoomPayload) => void;
+  [SOCKET_EVENTS.LEAVE_ROOM]: (payload: LeaveRoomPayload) => void;
   [SOCKET_EVENTS.SEND_MESSAGE]: (payload: SendMessagePayload) => void;
   [SOCKET_EVENTS.TYPING_STARTED]: (payload: TypingPayload) => void;
   [SOCKET_EVENTS.TYPING_STOPPED]: (payload: TypingPayload) => void;

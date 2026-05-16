@@ -28,6 +28,11 @@ export function createSocketServer(httpServer: HttpServer): SocketIOServer<
     }
   );
 
+  // TODO (hands-on): keep a per-room chat history so a user who joins an
+  // in-progress conversation can be sent the existing messages via
+  // ROOM_JOINED.history. A simple `Map<string, ChatMessage[]>` capped at
+  // a sensible size (e.g. 100 entries / room) is enough for the lecture.
+
   io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
     console.log(`[socket] connected: ${socket.id}`);
 
@@ -35,12 +40,22 @@ export function createSocketServer(httpServer: HttpServer): SocketIOServer<
     //   - validate the payload (username + room are non-empty strings)
     //   - join the socket to a Socket.IO room
     //   - store username + room on the socket for later use
-    //   - emit SOCKET_EVENTS.ROOM_JOINED back to the joining client
+    //   - emit SOCKET_EVENTS.ROOM_JOINED back to the joining client,
+    //     INCLUDING the room's existing chat history so they can see
+    //     messages that were sent before they arrived.
     //   - broadcast SOCKET_EVENTS.USER_JOINED to the other room members
+
+    // TODO (hands-on): listen for SOCKET_EVENTS.LEAVE_ROOM
+    //   - validate the payload + that the socket is actually in that room
+    //   - call socket.leave(room) (do NOT disconnect the socket)
+    //   - broadcast SOCKET_EVENTS.USER_LEFT to the remaining members so
+    //     they see the system message in real time.
+    //   - clear the username/room you stored on the socket
 
     // TODO (hands-on): listen for SOCKET_EVENTS.SEND_MESSAGE
     //   - validate the payload (room/username/text non-empty)
     //   - build a ChatMessage object with id + createdAt
+    //   - append it to the room's chat history (so future joiners see it)
     //   - broadcast SOCKET_EVENTS.NEW_MESSAGE to everyone in the room
 
     // TODO (hands-on, optional): listen for typing_started / typing_stopped
@@ -48,8 +63,9 @@ export function createSocketServer(httpServer: HttpServer): SocketIOServer<
 
     socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
       console.log(`[socket] disconnected: ${socket.id} (${reason})`);
-      // TODO (hands-on): if the socket was in a room, broadcast
-      // SOCKET_EVENTS.USER_LEFT so the remaining members know.
+      // TODO (hands-on): if the socket was still in a room (i.e. the user
+      // closed the tab or hit "Disconnect" without leaving first),
+      // broadcast SOCKET_EVENTS.USER_LEFT so the remaining members know.
     });
   });
 

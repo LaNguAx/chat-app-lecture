@@ -47,7 +47,11 @@ export default function ChatPanel({
       </div>
 
       <div className="messages">
-        {/* TODO (hands-on): render messages received via SOCKET_EVENTS.NEW_MESSAGE */}
+        {/* TODO (hands-on): render the seeded chat history (received via
+            ROOM_JOINED.history) and any new messages received via
+            SOCKET_EVENTS.NEW_MESSAGE. Both should look the same in the
+            UI — the only difference is that history arrives in one batch
+            on join. */}
         <div className="message message--system">
           No messages yet. The chat events are not wired up in this branch —
           implement them as part of the lecture exercise.
