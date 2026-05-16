@@ -13,32 +13,22 @@ type Props = {
   username: string;
   room: string;
   messages: RenderableMessage[];
-  typingLabel: string;
   error: string | null;
   onLeave: () => void;
   onSendMessage: (text: string) => void;
-  onTypingStart: () => void;
-  onTypingStop: () => void;
   onDismissError: () => void;
 };
-
-const TYPING_IDLE_MS = 1500;
 
 export default function ChatPanel({
   username,
   room,
   messages,
-  typingLabel,
   error,
   onLeave,
   onSendMessage,
-  onTypingStart,
-  onTypingStop,
   onDismissError,
 }: Props): JSX.Element {
   const [draft, setDraft] = useState("");
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isTypingRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -46,51 +36,12 @@ export default function ChatPanel({
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages]);
 
-  useEffect(() => {
-    return () => {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      if (isTypingRef.current) onTypingStop();
-    };
-  }, [onTypingStop]);
-
-  function fireTypingStopSoon() {
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      if (isTypingRef.current) {
-        isTypingRef.current = false;
-        onTypingStop();
-      }
-    }, TYPING_IDLE_MS);
-  }
-
-  function handleDraftChange(value: string) {
-    setDraft(value);
-    if (value.trim().length === 0) {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      if (isTypingRef.current) {
-        isTypingRef.current = false;
-        onTypingStop();
-      }
-      return;
-    }
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      onTypingStart();
-    }
-    fireTypingStopSoon();
-  }
-
   function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
     if (text.length === 0) return;
     onSendMessage(text);
     setDraft("");
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    if (isTypingRef.current) {
-      isTypingRef.current = false;
-      onTypingStop();
-    }
   }
 
   return (
@@ -123,8 +74,6 @@ export default function ChatPanel({
         )}
       </div>
 
-      <div className="typing">{typingLabel}</div>
-
       {error ? (
         <div className="error" role="alert" onClick={onDismissError}>
           {error} <span style={{ opacity: 0.7 }}>(click to dismiss)</span>
@@ -135,7 +84,7 @@ export default function ChatPanel({
         <input
           type="text"
           value={draft}
-          onChange={(event) => handleDraftChange(event.target.value)}
+          onChange={(event) => setDraft(event.target.value)}
           placeholder="Type a message and hit enter"
           autoComplete="off"
         />

@@ -31,11 +31,6 @@ export const SendMessagePayloadSchema = z.object({
   text: requiredTrimmedString("Message text is required."),
 });
 
-export const TypingPayloadSchema = z.object({
-  room,
-  username,
-});
-
 export const RoomJoinedPayloadSchema = z.object({
   room,
   username,

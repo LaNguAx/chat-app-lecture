@@ -8,13 +8,11 @@ import {
   type SendMessagePayload,
   type ServerToClientEvents,
   SOCKET_EVENTS,
-  type TypingPayload,
 } from "@chat/shared";
 import {
   JoinRoomPayloadSchema,
   LeaveRoomPayloadSchema,
   SendMessagePayloadSchema,
-  TypingPayloadSchema,
 } from "@chat/shared/schemas";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import type { ZodType } from "zod";
@@ -51,11 +49,6 @@ function parsePayload<T>(
     ok: false,
     reason: issue && issue.path.length > 0 ? issue.message : fallbackReason,
   };
-}
-
-function parseTypingPayload(payload: unknown): TypingPayload | null {
-  const result = TypingPayloadSchema.safeParse(payload);
-  return result.success ? result.data : null;
 }
 
 /**
@@ -167,18 +160,6 @@ export function createSocketServer(httpServer: HttpServer): TypedIO {
       };
       history.append(room, message);
       io.to(room).emit(SOCKET_EVENTS.NEW_MESSAGE, message);
-    });
-
-    socket.on(SOCKET_EVENTS.TYPING_STARTED, (rawPayload) => {
-      const payload = parseTypingPayload(rawPayload);
-      if (!payload) return;
-      socket.to(payload.room).emit(SOCKET_EVENTS.TYPING_STARTED, payload);
-    });
-
-    socket.on(SOCKET_EVENTS.TYPING_STOPPED, (rawPayload) => {
-      const payload = parseTypingPayload(rawPayload);
-      if (!payload) return;
-      socket.to(payload.room).emit(SOCKET_EVENTS.TYPING_STOPPED, payload);
     });
 
     socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {

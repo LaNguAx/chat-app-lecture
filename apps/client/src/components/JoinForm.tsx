@@ -46,7 +46,7 @@ export default function JoinForm({ onJoin, disabled }: Props): JSX.Element {
         Join room
       </button>
       {disabled ? (
-        <span className="typing">Waiting for server connection...</span>
+        <span className="connection-hint">Waiting for server connection...</span>
       ) : null}
     </form>
   );

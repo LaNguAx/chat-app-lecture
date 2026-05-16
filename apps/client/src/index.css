@@ -176,10 +176,9 @@ button.button--ghost {
   flex: 1;
 }
 
-.typing {
+.connection-hint {
   font-size: 0.8rem;
   color: #6b7280;
-  min-height: 1.2em;
 }
 
 .error {

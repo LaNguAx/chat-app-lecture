@@ -15,7 +15,6 @@ import type {
   LeaveRoomPayloadSchema,
   RoomJoinedPayloadSchema,
   SendMessagePayloadSchema,
-  TypingPayloadSchema,
   UserPresencePayloadSchema,
 } from "./socket-schemas.js";
 
@@ -33,8 +32,6 @@ export const SOCKET_EVENTS = {
   USER_LEFT: "user_left",
   SEND_MESSAGE: "send_message",
   NEW_MESSAGE: "new_message",
-  TYPING_STARTED: "typing_started",
-  TYPING_STOPPED: "typing_stopped",
   ERROR_MESSAGE: "error_message",
 } as const;
 
@@ -64,9 +61,6 @@ export type UserPresencePayload = z.infer<typeof UserPresencePayloadSchema>;
 /** Payload sent by a client when it submits a new message. */
 export type SendMessagePayload = z.infer<typeof SendMessagePayloadSchema>;
 
-/** Payload broadcast by the server while a user is typing. */
-export type TypingPayload = z.infer<typeof TypingPayloadSchema>;
-
 /** Payload broadcast by the server when a client sends invalid input. */
 export type ErrorMessagePayload = z.infer<typeof ErrorMessagePayloadSchema>;
 
@@ -82,8 +76,6 @@ export type ServerToClientEvents = {
   [SOCKET_EVENTS.USER_JOINED]: (payload: UserPresencePayload) => void;
   [SOCKET_EVENTS.USER_LEFT]: (payload: UserPresencePayload) => void;
   [SOCKET_EVENTS.NEW_MESSAGE]: (payload: ChatMessage) => void;
-  [SOCKET_EVENTS.TYPING_STARTED]: (payload: TypingPayload) => void;
-  [SOCKET_EVENTS.TYPING_STOPPED]: (payload: TypingPayload) => void;
   [SOCKET_EVENTS.ERROR_MESSAGE]: (payload: ErrorMessagePayload) => void;
 };
 
@@ -92,6 +84,4 @@ export type ClientToServerEvents = {
   [SOCKET_EVENTS.JOIN_ROOM]: (payload: JoinRoomPayload) => void;
   [SOCKET_EVENTS.LEAVE_ROOM]: (payload: LeaveRoomPayload) => void;
   [SOCKET_EVENTS.SEND_MESSAGE]: (payload: SendMessagePayload) => void;
-  [SOCKET_EVENTS.TYPING_STARTED]: (payload: TypingPayload) => void;
-  [SOCKET_EVENTS.TYPING_STOPPED]: (payload: TypingPayload) => void;
 };

@@ -10,7 +10,7 @@ apps/
   client/    React + Vite + TypeScript frontend
   server/    Node.js + Express + Socket.IO backend
 packages/
-  shared/    Shared TypeScript event names and payload types
+  shared/    Shared event names, Zod schemas, and inferred payload types
 ```
 
 ## Branches
@@ -88,8 +88,6 @@ End-to-end with Socket.IO rooms:
 - `user_left` is also broadcast on socket `disconnect` (closed tab,
   network drop, "Disconnect" button) and when the user joins a
   different room (a socket is only ever in one room at a time).
-- `typing_started` / `typing_stopped`: simple typing indicator with a
-  client-side idle timeout.
 - `error_message`: server reports Zod validation errors back to the offending
   client; the UI surfaces them in an error banner.
 

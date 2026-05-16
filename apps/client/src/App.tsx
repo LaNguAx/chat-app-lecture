@@ -4,7 +4,7 @@ import {
   SOCKET_EVENTS,
   type UserPresencePayload,
 } from "@chat/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ChatPanel from "./components/ChatPanel.js";
 import ConnectionStatus, {
   type ConnectionState,
@@ -32,19 +32,14 @@ export default function App(): JSX.Element {
   const [room, setRoom] = useState("");
   const [joined, setJoined] = useState(false);
   const [messages, setMessages] = useState<RenderableMessage[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Keep a ref to the current room so callbacks defined inside effects
   // can filter events without re-subscribing on every state change.
   const roomRef = useRef("");
-  const usernameRef = useRef("");
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
-  useEffect(() => {
-    usernameRef.current = username;
-  }, [username]);
 
   // Connection lifecycle. When the socket drops (manual Disconnect, tab
   // throttle, server restart) the user has no server-side room anymore,
@@ -55,7 +50,6 @@ export default function App(): JSX.Element {
       setConnection("disconnected");
       setJoined(false);
       setMessages([]);
-      setTypingUsers([]);
       setRoom("");
     };
 
@@ -81,7 +75,6 @@ export default function App(): JSX.Element {
         text: `You joined #${payload.room} as ${payload.username}.`,
       };
       setMessages([...history, joinedSystem]);
-      setTypingUsers([]);
       setError(null);
     };
 
@@ -107,32 +100,11 @@ export default function App(): JSX.Element {
           text: `${payload.username} left the room.`,
         },
       ]);
-      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
     };
 
     const handleNewMessage = (payload: ChatMessage) => {
       if (payload.room !== roomRef.current) return;
       setMessages((prev) => [...prev, toChatMessage(payload)]);
-      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
-    };
-
-    const handleTypingStarted = (payload: {
-      room: string;
-      username: string;
-    }) => {
-      if (payload.room !== roomRef.current) return;
-      if (payload.username === usernameRef.current) return;
-      setTypingUsers((prev) =>
-        prev.includes(payload.username) ? prev : [...prev, payload.username]
-      );
-    };
-
-    const handleTypingStopped = (payload: {
-      room: string;
-      username: string;
-    }) => {
-      if (payload.room !== roomRef.current) return;
-      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
     };
 
     const handleError = (payload: { message: string }) => {
@@ -143,8 +115,6 @@ export default function App(): JSX.Element {
     socket.on(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
     socket.on(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
     socket.on(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage);
-    socket.on(SOCKET_EVENTS.TYPING_STARTED, handleTypingStarted);
-    socket.on(SOCKET_EVENTS.TYPING_STOPPED, handleTypingStopped);
     socket.on(SOCKET_EVENTS.ERROR_MESSAGE, handleError);
 
     return () => {
@@ -152,8 +122,6 @@ export default function App(): JSX.Element {
       socket.off(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
       socket.off(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
       socket.off(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage);
-      socket.off(SOCKET_EVENTS.TYPING_STARTED, handleTypingStarted);
-      socket.off(SOCKET_EVENTS.TYPING_STOPPED, handleTypingStopped);
       socket.off(SOCKET_EVENTS.ERROR_MESSAGE, handleError);
     };
   }, []);
@@ -178,7 +146,6 @@ export default function App(): JSX.Element {
     }
     setJoined(false);
     setMessages([]);
-    setTypingUsers([]);
     setRoom("");
   }, [room, username]);
 
@@ -197,25 +164,6 @@ export default function App(): JSX.Element {
     },
     [room, username]
   );
-
-  const handleTypingStart = useCallback(() => {
-    if (!room || !username) return;
-    socket.emit(SOCKET_EVENTS.TYPING_STARTED, { room, username });
-  }, [room, username]);
-
-  const handleTypingStop = useCallback(() => {
-    if (!room || !username) return;
-    socket.emit(SOCKET_EVENTS.TYPING_STOPPED, { room, username });
-  }, [room, username]);
-
-  const typingLabel = useMemo(() => {
-    if (typingUsers.length === 0) return "";
-    if (typingUsers.length === 1) return `${typingUsers[0]} is typing...`;
-    if (typingUsers.length === 2) {
-      return `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
-    }
-    return "Several people are typing...";
-  }, [typingUsers]);
 
   return (
     <div className="app">
@@ -241,12 +189,9 @@ export default function App(): JSX.Element {
           username={username}
           room={room}
           messages={messages}
-          typingLabel={typingLabel}
           error={error}
           onLeave={handleLeave}
           onSendMessage={handleSendMessage}
-          onTypingStart={handleTypingStart}
-          onTypingStop={handleTypingStop}
           onDismissError={() => setError(null)}
         />
       )}
