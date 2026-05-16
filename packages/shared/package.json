@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./schemas": {
+      "types": "./src/socket-schemas.ts",
+      "default": "./src/socket-schemas.ts"
     }
   },
   "scripts": {
@@ -16,5 +20,8 @@
   },
   "devDependencies": {
     "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }

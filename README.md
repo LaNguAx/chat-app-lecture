@@ -69,7 +69,7 @@ End-to-end with Socket.IO rooms:
 - **Connect / Disconnect button** in the header that calls
   `socket.connect()` / `socket.disconnect()` so the lifecycle and the
   resulting `user_left` broadcast are visible during the lecture.
-- `join_room`: client emits, server validates, joins the Socket.IO room,
+- `join_room`: client emits, server validates with shared Zod schemas, joins the Socket.IO room,
   stores `{ username, room }` on the socket, replies with `room_joined`,
   broadcasts `user_joined` to other room members.
 - **Chat history on join**: server keeps a per-room, in-memory, capped
@@ -77,7 +77,7 @@ End-to-end with Socket.IO rooms:
   carries `history: ChatMessage[]`, and the client seeds its message
   list with that history so a user joining mid-conversation sees what
   was said before they arrived.
-- `send_message`: client emits, server validates against the stored
+- `send_message`: client emits, server validates with Zod and checks against the stored
   session, creates a `ChatMessage` with `id` + `createdAt`, appends it
   to the room history, and broadcasts `new_message` to everyone in the
   room.
@@ -90,12 +90,15 @@ End-to-end with Socket.IO rooms:
   different room (a socket is only ever in one room at a time).
 - `typing_started` / `typing_stopped`: simple typing indicator with a
   client-side idle timeout.
-- `error_message`: server reports validation errors back to the offending
+- `error_message`: server reports Zod validation errors back to the offending
   client; the UI surfaces them in an error banner.
 
 Event names and payload types live in
 [`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts)
-and are imported on both sides, so the contract is the same on the wire.
+and Zod schemas live in
+[`packages/shared/src/socket-schemas.ts`](packages/shared/src/socket-schemas.ts).
+Types are inferred from the schemas, so the runtime checks and TypeScript
+contract stay aligned.
 
 ## Where the code lives
 

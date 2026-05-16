@@ -10,7 +10,14 @@ import {
   SOCKET_EVENTS,
   type TypingPayload,
 } from "@chat/shared";
+import {
+  JoinRoomPayloadSchema,
+  LeaveRoomPayloadSchema,
+  SendMessagePayloadSchema,
+  TypingPayloadSchema,
+} from "@chat/shared/schemas";
 import { Server as SocketIOServer, type Socket } from "socket.io";
+import type { ZodType } from "zod";
 import { config } from "./config.js";
 import { RoomHistory } from "./room-history.js";
 
@@ -31,56 +38,24 @@ type TypedIO = SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
-/** Trim a value and return it only when it ends up non-empty. */
-function nonEmpty(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
+function parsePayload<T>(
+  schema: ZodType<T>,
+  payload: unknown,
+  fallbackReason: string
+): ParseResult<T> {
+  const result = schema.safeParse(payload);
+  if (result.success) return { ok: true, data: result.data };
 
-function parseJoinPayload(payload: unknown): ParseResult<JoinRoomPayload> {
-  if (typeof payload !== "object" || payload === null) {
-    return { ok: false, reason: "Invalid join payload." };
-  }
-  const username = nonEmpty((payload as Record<string, unknown>).username);
-  const room = nonEmpty((payload as Record<string, unknown>).room);
-  if (!username) return { ok: false, reason: "Username is required." };
-  if (!room) return { ok: false, reason: "Room is required." };
-  return { ok: true, data: { username, room } };
-}
-
-function parseLeavePayload(payload: unknown): ParseResult<LeaveRoomPayload> {
-  if (typeof payload !== "object" || payload === null) {
-    return { ok: false, reason: "Invalid leave payload." };
-  }
-  const username = nonEmpty((payload as Record<string, unknown>).username);
-  const room = nonEmpty((payload as Record<string, unknown>).room);
-  if (!username || !room) {
-    return { ok: false, reason: "Leave payload requires room and username." };
-  }
-  return { ok: true, data: { username, room } };
-}
-
-function parseSendPayload(payload: unknown): ParseResult<SendMessagePayload> {
-  if (typeof payload !== "object" || payload === null) {
-    return { ok: false, reason: "Invalid message payload." };
-  }
-  const username = nonEmpty((payload as Record<string, unknown>).username);
-  const room = nonEmpty((payload as Record<string, unknown>).room);
-  const text = nonEmpty((payload as Record<string, unknown>).text);
-  if (!username || !room) {
-    return { ok: false, reason: "Join a room before sending messages." };
-  }
-  if (!text) return { ok: false, reason: "Message text is required." };
-  return { ok: true, data: { username, room, text } };
+  const issue = result.error.issues[0];
+  return {
+    ok: false,
+    reason: issue && issue.path.length > 0 ? issue.message : fallbackReason,
+  };
 }
 
 function parseTypingPayload(payload: unknown): TypingPayload | null {
-  if (typeof payload !== "object" || payload === null) return null;
-  const username = nonEmpty((payload as Record<string, unknown>).username);
-  const room = nonEmpty((payload as Record<string, unknown>).room);
-  if (!username || !room) return null;
-  return { username, room };
+  const result = TypingPayloadSchema.safeParse(payload);
+  return result.success ? result.data : null;
 }
 
 /**
@@ -121,7 +96,11 @@ export function createSocketServer(httpServer: HttpServer): TypedIO {
     console.log(`[socket] connected: ${socket.id}`);
 
     socket.on(SOCKET_EVENTS.JOIN_ROOM, (rawPayload) => {
-      const parsed = parseJoinPayload(rawPayload);
+      const parsed = parsePayload<JoinRoomPayload>(
+        JoinRoomPayloadSchema,
+        rawPayload,
+        "Invalid join payload."
+      );
       if (!parsed.ok) {
         socket.emit(SOCKET_EVENTS.ERROR_MESSAGE, { message: parsed.reason });
         return;
@@ -142,7 +121,11 @@ export function createSocketServer(httpServer: HttpServer): TypedIO {
     });
 
     socket.on(SOCKET_EVENTS.LEAVE_ROOM, (rawPayload) => {
-      const parsed = parseLeavePayload(rawPayload);
+      const parsed = parsePayload<LeaveRoomPayload>(
+        LeaveRoomPayloadSchema,
+        rawPayload,
+        "Invalid leave payload."
+      );
       if (!parsed.ok) {
         socket.emit(SOCKET_EVENTS.ERROR_MESSAGE, { message: parsed.reason });
         return;
@@ -156,7 +139,11 @@ export function createSocketServer(httpServer: HttpServer): TypedIO {
     });
 
     socket.on(SOCKET_EVENTS.SEND_MESSAGE, (rawPayload) => {
-      const parsed = parseSendPayload(rawPayload);
+      const parsed = parsePayload<SendMessagePayload>(
+        SendMessagePayloadSchema,
+        rawPayload,
+        "Invalid message payload."
+      );
       if (!parsed.ok) {
         socket.emit(SOCKET_EVENTS.ERROR_MESSAGE, { message: parsed.reason });
         return;
