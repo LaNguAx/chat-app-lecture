@@ -1,5 +1,6 @@
 import {
   type ChatMessage,
+  type RoomJoinedPayload,
   SOCKET_EVENTS,
   type UserPresencePayload,
 } from "@chat/shared";
@@ -18,6 +19,10 @@ type SystemMessage = {
 };
 
 type RenderableMessage = (ChatMessage & { kind: "chat" }) | SystemMessage;
+
+function toChatMessage(message: ChatMessage): RenderableMessage {
+  return { ...message, kind: "chat" };
+}
 
 export default function App(): JSX.Element {
   const [connection, setConnection] = useState<ConnectionState>(
@@ -41,10 +46,18 @@ export default function App(): JSX.Element {
     usernameRef.current = username;
   }, [username]);
 
-  // Connection lifecycle.
+  // Connection lifecycle. When the socket drops (manual Disconnect, tab
+  // throttle, server restart) the user has no server-side room anymore,
+  // so kick them back to the join form for a clean reconnect story.
   useEffect(() => {
     const handleConnect = () => setConnection("connected");
-    const handleDisconnect = () => setConnection("disconnected");
+    const handleDisconnect = () => {
+      setConnection("disconnected");
+      setJoined(false);
+      setMessages([]);
+      setTypingUsers([]);
+      setRoom("");
+    };
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
@@ -57,14 +70,17 @@ export default function App(): JSX.Element {
   // Chat events. Subscribe once and never tear down so we don't miss
   // events while the user is mid-render.
   useEffect(() => {
-    const handleRoomJoined = (payload: { room: string; username: string }) => {
-      setMessages([
-        {
-          kind: "system",
-          id: `joined-${payload.room}-${Date.now()}`,
-          text: `You joined #${payload.room} as ${payload.username}.`,
-        },
-      ]);
+    const handleRoomJoined = (payload: RoomJoinedPayload) => {
+      // Seed the message list with the server-replayed history first,
+      // then a system separator marking where this user actually joined.
+      // Live `new_message` events flow in afterwards.
+      const history = payload.history.map(toChatMessage);
+      const joinedSystem: RenderableMessage = {
+        kind: "system",
+        id: `joined-${payload.room}-${Date.now()}`,
+        text: `You joined #${payload.room} as ${payload.username}.`,
+      };
+      setMessages([...history, joinedSystem]);
       setTypingUsers([]);
       setError(null);
     };
@@ -96,7 +112,7 @@ export default function App(): JSX.Element {
 
     const handleNewMessage = (payload: ChatMessage) => {
       if (payload.room !== roomRef.current) return;
-      setMessages((prev) => [...prev, { ...payload, kind: "chat" }]);
+      setMessages((prev) => [...prev, toChatMessage(payload)]);
       setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
     };
 
@@ -154,14 +170,26 @@ export default function App(): JSX.Element {
   );
 
   const handleLeave = useCallback(() => {
-    if (room) {
-      socket.emit(SOCKET_EVENTS.TYPING_STOPPED, { room, username });
+    if (room && username) {
+      // Tell the server we're leaving so it can broadcast `user_left`
+      // to the remaining members of this room. The socket itself stays
+      // connected — we just exit the room.
+      socket.emit(SOCKET_EVENTS.LEAVE_ROOM, { room, username });
     }
     setJoined(false);
     setMessages([]);
     setTypingUsers([]);
     setRoom("");
   }, [room, username]);
+
+  const handleToggleConnection = useCallback(() => {
+    if (socket.connected) {
+      socket.disconnect();
+    } else {
+      setConnection("connecting");
+      socket.connect();
+    }
+  }, []);
 
   const handleSendMessage = useCallback(
     (text: string) => {
@@ -193,7 +221,17 @@ export default function App(): JSX.Element {
     <div className="app">
       <header className="app__header">
         <h1>Socket.IO Chat</h1>
-        <ConnectionStatus state={connection} />
+        <div className="app__header-controls">
+          <ConnectionStatus state={connection} />
+          <button
+            type="button"
+            className="button--ghost"
+            onClick={handleToggleConnection}
+            disabled={connection === "connecting"}
+          >
+            {connection === "connected" ? "Disconnect" : "Connect"}
+          </button>
+        </div>
       </header>
 
       {!joined ? (
