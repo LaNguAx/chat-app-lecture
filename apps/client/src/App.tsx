@@ -21,6 +21,9 @@ export default function App(): JSX.Element {
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
 
+    // STEP 10 TODO: also listen for NEW_MESSAGE, USER_JOINED, USER_LEFT,
+    // and ERROR_MESSAGE. Update message/error state and pass it to ChatPanel.
+
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);

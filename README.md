@@ -27,6 +27,8 @@ Switch to the starting point:
 git checkout start
 ```
 
+Students implementing the exercise should follow **[STUDENT_MANUAL.md](STUDENT_MANUAL.md)** on the `start` branch.
+
 ## Requirements
 
 - Node.js >= 20.10
@@ -114,10 +116,10 @@ Where to look:
 - Client socket setup: [`apps/client/src/lib/socket.ts`](apps/client/src/lib/socket.ts)
 - Client UI: [`apps/client/src/App.tsx`](apps/client/src/App.tsx) and `apps/client/src/components/`
 - Server socket setup: [`apps/server/src/socket.ts`](apps/server/src/socket.ts)
-- Student manual: [`docs/STUDENT_MANUAL.md`](docs/STUDENT_MANUAL.md)
+  - **Step-by-step guide:** [`STUDENT_MANUAL.md`](STUDENT_MANUAL.md)
 
-Each of these files contains `TODO (hands-on)` comments pointing at the
-exact piece of logic you'll implement during the session.
+Each file above contains `STEP N TODO` comments that match the manual.
+Work through the steps in order (server first, then client).
 
 ## After the session
 

@@ -12,7 +12,7 @@ type Props = {
  * In the START branch this is intentionally inert: it renders the UI
  * (message list, composer, error area) but does not yet speak Socket.IO.
  * Students wire the real event flow in the hands-on exercise; see the
- * README and docs/STUDENT_MANUAL.md for the exact order.
+ * README and STUDENT_MANUAL.md for the exact order.
  */
 export default function ChatPanel({
   username,
@@ -42,7 +42,7 @@ export default function ChatPanel({
       </div>
 
       <div className="messages">
-        {/* STEP 10 TODO: render messages here.
+        {/* STEP 11 TODO: render messages here.
             - ROOM_JOINED gives you payload.history.
             - NEW_MESSAGE gives you one new message at a time.
             - USER_JOINED / USER_LEFT can become small system messages. */}
@@ -52,7 +52,7 @@ export default function ChatPanel({
         </div>
       </div>
 
-      {/* STEP 11 TODO: render an error banner when the server emits
+      {/* STEP 12 TODO: render an error banner when the server emits
           SOCKET_EVENTS.ERROR_MESSAGE. */}
 
       <form className="composer" onSubmit={handleSend}>
