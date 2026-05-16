@@ -66,14 +66,28 @@ npm run typecheck    # type-check shared, server, and client
 End-to-end with Socket.IO rooms:
 
 - Connection status (connected / connecting / disconnected).
+- **Connect / Disconnect button** in the header that calls
+  `socket.connect()` / `socket.disconnect()` so the lifecycle and the
+  resulting `user_left` broadcast are visible during the lecture.
 - `join_room`: client emits, server validates, joins the Socket.IO room,
   stores `{ username, room }` on the socket, replies with `room_joined`,
   broadcasts `user_joined` to other room members.
+- **Chat history on join**: server keeps a per-room, in-memory, capped
+  message buffer (`apps/server/src/room-history.ts`). `room_joined`
+  carries `history: ChatMessage[]`, and the client seeds its message
+  list with that history so a user joining mid-conversation sees what
+  was said before they arrived.
 - `send_message`: client emits, server validates against the stored
-  session, creates a `ChatMessage` with `id` + `createdAt`, broadcasts
-  `new_message` to everyone in the room.
-- `user_left`: broadcast on disconnect or when the user joins a different
-  room (a socket is only ever in one room at a time).
+  session, creates a `ChatMessage` with `id` + `createdAt`, appends it
+  to the room history, and broadcasts `new_message` to everyone in the
+  room.
+- **Explicit room exit** (`leave_room`): client emits when the user
+  clicks "Leave"; server broadcasts `user_left` to the remaining
+  members and removes the socket from the room **without** disconnecting
+  it. The user can then join a different room without reconnecting.
+- `user_left` is also broadcast on socket `disconnect` (closed tab,
+  network drop, "Disconnect" button) and when the user joins a
+  different room (a socket is only ever in one room at a time).
 - `typing_started` / `typing_stopped`: simple typing indicator with a
   client-side idle timeout.
 - `error_message`: server reports validation errors back to the offending
@@ -88,4 +102,5 @@ and are imported on both sides, so the contract is the same on the wire.
 - Client socket setup: [`apps/client/src/lib/socket.ts`](apps/client/src/lib/socket.ts)
 - Client UI + state: [`apps/client/src/App.tsx`](apps/client/src/App.tsx) and `apps/client/src/components/`
 - Server socket handlers: [`apps/server/src/socket.ts`](apps/server/src/socket.ts)
+- Server room history: [`apps/server/src/room-history.ts`](apps/server/src/room-history.ts)
 - Server HTTP + boot: [`apps/server/src/app.ts`](apps/server/src/app.ts), [`apps/server/src/index.ts`](apps/server/src/index.ts)
