@@ -1,0 +1,57 @@
+import type { Server as HttpServer } from "node:http";
+import {
+  type ClientToServerEvents,
+  type ServerToClientEvents,
+  SOCKET_EVENTS,
+} from "@chat/shared";
+import { Server as SocketIOServer } from "socket.io";
+import { config } from "./config.js";
+
+/**
+ * Attach a Socket.IO server to the existing HTTP server.
+ *
+ * In the START branch we only wire up the connection lifecycle. The
+ * chat event handlers (join_room, send_message, typing, ...) are left
+ * as TODOs for students to implement during the hands-on exercise.
+ */
+export function createSocketServer(httpServer: HttpServer): SocketIOServer<
+  ClientToServerEvents,
+  ServerToClientEvents
+> {
+  const io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents>(
+    httpServer,
+    {
+      cors: {
+        origin: config.clientOrigins,
+        credentials: true,
+      },
+    }
+  );
+
+  io.on(SOCKET_EVENTS.CONNECTION, (socket) => {
+    console.log(`[socket] connected: ${socket.id}`);
+
+    // TODO (hands-on): listen for SOCKET_EVENTS.JOIN_ROOM
+    //   - validate the payload (username + room are non-empty strings)
+    //   - join the socket to a Socket.IO room
+    //   - store username + room on the socket for later use
+    //   - emit SOCKET_EVENTS.ROOM_JOINED back to the joining client
+    //   - broadcast SOCKET_EVENTS.USER_JOINED to the other room members
+
+    // TODO (hands-on): listen for SOCKET_EVENTS.SEND_MESSAGE
+    //   - validate the payload (room/username/text non-empty)
+    //   - build a ChatMessage object with id + createdAt
+    //   - broadcast SOCKET_EVENTS.NEW_MESSAGE to everyone in the room
+
+    // TODO (hands-on, optional): listen for typing_started / typing_stopped
+    //   - broadcast typing state to the other room members
+
+    socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
+      console.log(`[socket] disconnected: ${socket.id} (${reason})`);
+      // TODO (hands-on): if the socket was in a room, broadcast
+      // SOCKET_EVENTS.USER_LEFT so the remaining members know.
+    });
+  });
+
+  return io;
+}

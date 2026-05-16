@@ -1,0 +1,30 @@
+{
+  "name": "chat-app-lecture",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Hands-on Socket.IO lecture: a small real-time chat app built as a TypeScript monorepo.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.10"
+  },
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:server dev:client",
+    "dev:server": "npm --workspace @chat/server run dev",
+    "dev:client": "npm --workspace @chat/client run dev",
+    "build": "npm-run-all --parallel build:server build:client",
+    "build:server": "npm --workspace @chat/server run build",
+    "build:client": "npm --workspace @chat/client run build",
+    "typecheck": "npm-run-all --parallel typecheck:*",
+    "typecheck:shared": "npm --workspace @chat/shared run typecheck",
+    "typecheck:server": "npm --workspace @chat/server run typecheck",
+    "typecheck:client": "npm --workspace @chat/client run typecheck"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.6.3"
+  }
+}
