@@ -10,7 +10,7 @@ apps/
   client/    React + Vite + TypeScript frontend
   server/    Node.js + Express + Socket.IO backend
 packages/
-  shared/    Shared TypeScript event names and payload types
+  shared/    Shared event names, Zod schemas, and inferred payload types
 ```
 
 ## Branches
@@ -83,6 +83,7 @@ In the exercise, we will implement:
 
 - Client emits `join_room`
 - Server listens to `join_room`
+- Server validates client payloads with shared Zod schemas
 - Server joins the socket into a Socket.IO room
 - Client emits `send_message`
 - Server broadcasts `new_message` to the room
@@ -104,8 +105,12 @@ In the exercise, we will implement:
 - Optional: simple error feedback via `error_message`
 
 All of the event names and payload types are already defined in
-[`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts);
-the goal of the lecture is to wire them up on both sides.
+[`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts).
+Runtime schemas are defined in
+[`packages/shared/src/socket-schemas.ts`](packages/shared/src/socket-schemas.ts),
+and the payload types are inferred from those schemas so validation and
+TypeScript stay in sync. The goal of the lecture is to wire the schemas
+and events up on both sides.
 
 Where to look:
 

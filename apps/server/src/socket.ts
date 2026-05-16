@@ -37,7 +37,7 @@ export function createSocketServer(httpServer: HttpServer): SocketIOServer<
     console.log(`[socket] connected: ${socket.id}`);
 
     // TODO (hands-on): listen for SOCKET_EVENTS.JOIN_ROOM
-    //   - validate the payload (username + room are non-empty strings)
+    //   - validate the payload with JoinRoomPayloadSchema.safeParse(...)
     //   - join the socket to a Socket.IO room
     //   - store username + room on the socket for later use
     //   - emit SOCKET_EVENTS.ROOM_JOINED back to the joining client,
@@ -46,19 +46,21 @@ export function createSocketServer(httpServer: HttpServer): SocketIOServer<
     //   - broadcast SOCKET_EVENTS.USER_JOINED to the other room members
 
     // TODO (hands-on): listen for SOCKET_EVENTS.LEAVE_ROOM
-    //   - validate the payload + that the socket is actually in that room
+    //   - validate the payload with LeaveRoomPayloadSchema.safeParse(...)
+    //   - check that the socket is actually in that room
     //   - call socket.leave(room) (do NOT disconnect the socket)
     //   - broadcast SOCKET_EVENTS.USER_LEFT to the remaining members so
     //     they see the system message in real time.
     //   - clear the username/room you stored on the socket
 
     // TODO (hands-on): listen for SOCKET_EVENTS.SEND_MESSAGE
-    //   - validate the payload (room/username/text non-empty)
+    //   - validate the payload with SendMessagePayloadSchema.safeParse(...)
     //   - build a ChatMessage object with id + createdAt
     //   - append it to the room's chat history (so future joiners see it)
     //   - broadcast SOCKET_EVENTS.NEW_MESSAGE to everyone in the room
 
     // TODO (hands-on, optional): listen for typing_started / typing_stopped
+    //   - validate typing payloads with TypingPayloadSchema.safeParse(...)
     //   - broadcast typing state to the other room members
 
     socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
