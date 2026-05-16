@@ -21,6 +21,8 @@ packages/
 | `start` | Student starting point. Setup + UI shell, no chat logic yet.  |
 | `final` | **This branch.** Completed real-time chat.                    |
 
+Students implementing the exercise should follow **[STUDENT_MANUAL.md](STUDENT_MANUAL.md)** on the `start` branch.
+
 ## Requirements
 
 - Node.js >= 20.10
