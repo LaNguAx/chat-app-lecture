@@ -10,7 +10,7 @@ apps/
   client/    React + Vite + TypeScript frontend
   server/    Node.js + Express + Socket.IO backend
 packages/
-  shared/    Shared event names, Zod schemas, and inferred payload types
+  shared/    Shared Socket.IO event names and payload types
 ```
 
 ## Branches
@@ -83,7 +83,6 @@ In the exercise, we will implement:
 
 - Client emits `join_room`
 - Server listens to `join_room`
-- Server validates client payloads with shared Zod schemas
 - Server joins the socket into a Socket.IO room
 - Client emits `send_message`
 - Server broadcasts `new_message` to the room
@@ -101,22 +100,21 @@ In the exercise, we will implement:
   sends it to a new joiner inside `room_joined.history`; the client
   renders that history so a late joiner sees what was said before they
   arrived.
-- Optional: typing indicators (`typing_started` / `typing_stopped`)
-- Optional: simple error feedback via `error_message`
+- Simple error feedback via `error_message`
 
 All of the event names and payload types are already defined in
 [`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts).
-Runtime schemas are defined in
-[`packages/shared/src/socket-schemas.ts`](packages/shared/src/socket-schemas.ts),
-and the payload types are inferred from those schemas so validation and
-TypeScript stay in sync. The goal of the lecture is to wire the schemas
-and events up on both sides.
+The goal of the lecture is to wire up those events on the client and server.
+The starter does not ask you to build validation; the `final` branch shows
+one clean way to add production-style validation after the core Socket.IO
+flow is working.
 
 Where to look:
 
 - Client socket setup: [`apps/client/src/lib/socket.ts`](apps/client/src/lib/socket.ts)
 - Client UI: [`apps/client/src/App.tsx`](apps/client/src/App.tsx) and `apps/client/src/components/`
 - Server socket setup: [`apps/server/src/socket.ts`](apps/server/src/socket.ts)
+- Student manual: [`docs/STUDENT_MANUAL.md`](docs/STUDENT_MANUAL.md)
 
 Each of these files contains `TODO (hands-on)` comments pointing at the
 exact piece of logic you'll implement during the session.

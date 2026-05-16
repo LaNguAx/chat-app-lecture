@@ -10,9 +10,9 @@ type Props = {
  * Chat panel shell.
  *
  * In the START branch this is intentionally inert: it renders the UI
- * (message list, composer, typing area, error area) but does not yet
- * speak Socket.IO. Students wire the real event flow in the hands-on
- * exercise; see the README for the list of TODOs.
+ * (message list, composer, error area) but does not yet speak Socket.IO.
+ * Students wire the real event flow in the hands-on exercise; see the
+ * README and docs/STUDENT_MANUAL.md for the exact order.
  */
 export default function ChatPanel({
   username,
@@ -24,15 +24,10 @@ export default function ChatPanel({
   function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (draft.trim().length === 0) return;
-    // TODO (hands-on): emit SOCKET_EVENTS.SEND_MESSAGE with
+    // STEP 9 TODO: emit SOCKET_EVENTS.SEND_MESSAGE with:
     //   { room, username, text: draft.trim() }
+    // You will need to import SOCKET_EVENTS and the shared socket client.
     setDraft("");
-  }
-
-  function handleDraftChange(value: string) {
-    setDraft(value);
-    // TODO (hands-on, optional): emit SOCKET_EVENTS.TYPING_STARTED while typing,
-    // then SOCKET_EVENTS.TYPING_STOPPED after a short pause / on send.
   }
 
   return (
@@ -47,30 +42,24 @@ export default function ChatPanel({
       </div>
 
       <div className="messages">
-        {/* TODO (hands-on): render the seeded chat history (received via
-            ROOM_JOINED.history) and any new messages received via
-            SOCKET_EVENTS.NEW_MESSAGE. Both should look the same in the
-            UI — the only difference is that history arrives in one batch
-            on join. */}
+        {/* STEP 10 TODO: render messages here.
+            - ROOM_JOINED gives you payload.history.
+            - NEW_MESSAGE gives you one new message at a time.
+            - USER_JOINED / USER_LEFT can become small system messages. */}
         <div className="message message--system">
           No messages yet. The chat events are not wired up in this branch —
           implement them as part of the lecture exercise.
         </div>
       </div>
 
-      <div className="typing">
-        {/* TODO (hands-on, optional): show "alice is typing..." when other
-            users in the room emit SOCKET_EVENTS.TYPING_STARTED. */}
-      </div>
-
-      {/* TODO (hands-on): render an error banner when the server emits
+      {/* STEP 11 TODO: render an error banner when the server emits
           SOCKET_EVENTS.ERROR_MESSAGE. */}
 
       <form className="composer" onSubmit={handleSend}>
         <input
           type="text"
           value={draft}
-          onChange={(event) => handleDraftChange(event.target.value)}
+          onChange={(event) => setDraft(event.target.value)}
           placeholder="Type a message and hit enter"
           autoComplete="off"
         />
