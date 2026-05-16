@@ -1,10 +1,23 @@
-import { useEffect, useState } from "react";
+import {
+  type ChatMessage,
+  SOCKET_EVENTS,
+  type UserPresencePayload,
+} from "@chat/shared";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChatPanel from "./components/ChatPanel.js";
 import ConnectionStatus, {
   type ConnectionState,
 } from "./components/ConnectionStatus.js";
 import JoinForm from "./components/JoinForm.js";
 import { socket } from "./lib/socket.js";
+
+type SystemMessage = {
+  kind: "system";
+  id: string;
+  text: string;
+};
+
+type RenderableMessage = (ChatMessage & { kind: "chat" }) | SystemMessage;
 
 export default function App(): JSX.Element {
   const [connection, setConnection] = useState<ConnectionState>(
@@ -13,32 +26,168 @@ export default function App(): JSX.Element {
   const [username, setUsername] = useState("");
   const [room, setRoom] = useState("");
   const [joined, setJoined] = useState(false);
+  const [messages, setMessages] = useState<RenderableMessage[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
+  // Keep a ref to the current room so callbacks defined inside effects
+  // can filter events without re-subscribing on every state change.
+  const roomRef = useRef("");
+  const usernameRef = useRef("");
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
+
+  // Connection lifecycle.
   useEffect(() => {
     const handleConnect = () => setConnection("connected");
     const handleDisconnect = () => setConnection("disconnected");
 
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
-
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
     };
   }, []);
 
-  function handleJoin(values: { username: string; room: string }) {
-    setUsername(values.username);
-    setRoom(values.room);
-    setJoined(true);
-    // TODO (hands-on): emit SOCKET_EVENTS.JOIN_ROOM with `values`.
-    // The server should answer with SOCKET_EVENTS.ROOM_JOINED.
-  }
+  // Chat events. Subscribe once and never tear down so we don't miss
+  // events while the user is mid-render.
+  useEffect(() => {
+    const handleRoomJoined = (payload: { room: string; username: string }) => {
+      setMessages([
+        {
+          kind: "system",
+          id: `joined-${payload.room}-${Date.now()}`,
+          text: `You joined #${payload.room} as ${payload.username}.`,
+        },
+      ]);
+      setTypingUsers([]);
+      setError(null);
+    };
 
-  function handleLeave() {
+    const handleUserJoined = (payload: UserPresencePayload) => {
+      if (payload.room !== roomRef.current) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          kind: "system",
+          id: `userjoin-${payload.username}-${Date.now()}`,
+          text: `${payload.username} joined the room.`,
+        },
+      ]);
+    };
+
+    const handleUserLeft = (payload: UserPresencePayload) => {
+      if (payload.room !== roomRef.current) return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          kind: "system",
+          id: `userleft-${payload.username}-${Date.now()}`,
+          text: `${payload.username} left the room.`,
+        },
+      ]);
+      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
+    };
+
+    const handleNewMessage = (payload: ChatMessage) => {
+      if (payload.room !== roomRef.current) return;
+      setMessages((prev) => [...prev, { ...payload, kind: "chat" }]);
+      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
+    };
+
+    const handleTypingStarted = (payload: {
+      room: string;
+      username: string;
+    }) => {
+      if (payload.room !== roomRef.current) return;
+      if (payload.username === usernameRef.current) return;
+      setTypingUsers((prev) =>
+        prev.includes(payload.username) ? prev : [...prev, payload.username]
+      );
+    };
+
+    const handleTypingStopped = (payload: {
+      room: string;
+      username: string;
+    }) => {
+      if (payload.room !== roomRef.current) return;
+      setTypingUsers((prev) => prev.filter((u) => u !== payload.username));
+    };
+
+    const handleError = (payload: { message: string }) => {
+      setError(payload.message);
+    };
+
+    socket.on(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
+    socket.on(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
+    socket.on(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
+    socket.on(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage);
+    socket.on(SOCKET_EVENTS.TYPING_STARTED, handleTypingStarted);
+    socket.on(SOCKET_EVENTS.TYPING_STOPPED, handleTypingStopped);
+    socket.on(SOCKET_EVENTS.ERROR_MESSAGE, handleError);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
+      socket.off(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
+      socket.off(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
+      socket.off(SOCKET_EVENTS.NEW_MESSAGE, handleNewMessage);
+      socket.off(SOCKET_EVENTS.TYPING_STARTED, handleTypingStarted);
+      socket.off(SOCKET_EVENTS.TYPING_STOPPED, handleTypingStopped);
+      socket.off(SOCKET_EVENTS.ERROR_MESSAGE, handleError);
+    };
+  }, []);
+
+  const handleJoin = useCallback(
+    (values: { username: string; room: string }) => {
+      setUsername(values.username);
+      setRoom(values.room);
+      setJoined(true);
+      setError(null);
+      socket.emit(SOCKET_EVENTS.JOIN_ROOM, values);
+    },
+    []
+  );
+
+  const handleLeave = useCallback(() => {
+    if (room) {
+      socket.emit(SOCKET_EVENTS.TYPING_STOPPED, { room, username });
+    }
     setJoined(false);
-    // TODO (hands-on, optional): emit a leave event or rejoin a new room.
-  }
+    setMessages([]);
+    setTypingUsers([]);
+    setRoom("");
+  }, [room, username]);
+
+  const handleSendMessage = useCallback(
+    (text: string) => {
+      socket.emit(SOCKET_EVENTS.SEND_MESSAGE, { room, username, text });
+    },
+    [room, username]
+  );
+
+  const handleTypingStart = useCallback(() => {
+    if (!room || !username) return;
+    socket.emit(SOCKET_EVENTS.TYPING_STARTED, { room, username });
+  }, [room, username]);
+
+  const handleTypingStop = useCallback(() => {
+    if (!room || !username) return;
+    socket.emit(SOCKET_EVENTS.TYPING_STOPPED, { room, username });
+  }, [room, username]);
+
+  const typingLabel = useMemo(() => {
+    if (typingUsers.length === 0) return "";
+    if (typingUsers.length === 1) return `${typingUsers[0]} is typing...`;
+    if (typingUsers.length === 2) {
+      return `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
+    }
+    return "Several people are typing...";
+  }, [typingUsers]);
 
   return (
     <div className="app">
@@ -48,9 +197,20 @@ export default function App(): JSX.Element {
       </header>
 
       {!joined ? (
-        <JoinForm onJoin={handleJoin} />
+        <JoinForm onJoin={handleJoin} disabled={connection !== "connected"} />
       ) : (
-        <ChatPanel username={username} room={room} onLeave={handleLeave} />
+        <ChatPanel
+          username={username}
+          room={room}
+          messages={messages}
+          typingLabel={typingLabel}
+          error={error}
+          onLeave={handleLeave}
+          onSendMessage={handleSendMessage}
+          onTypingStart={handleTypingStart}
+          onTypingStop={handleTypingStop}
+          onDismissError={() => setError(null)}
+        />
       )}
     </div>
   );

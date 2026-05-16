@@ -1,38 +1,96 @@
-import { useState, type FormEvent } from "react";
+import type { ChatMessage } from "@chat/shared";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+
+type SystemMessage = {
+  kind: "system";
+  id: string;
+  text: string;
+};
+
+type RenderableMessage = (ChatMessage & { kind: "chat" }) | SystemMessage;
 
 type Props = {
   username: string;
   room: string;
+  messages: RenderableMessage[];
+  typingLabel: string;
+  error: string | null;
   onLeave: () => void;
+  onSendMessage: (text: string) => void;
+  onTypingStart: () => void;
+  onTypingStop: () => void;
+  onDismissError: () => void;
 };
 
-/**
- * Chat panel shell.
- *
- * In the START branch this is intentionally inert: it renders the UI
- * (message list, composer, typing area, error area) but does not yet
- * speak Socket.IO. Students wire the real event flow in the hands-on
- * exercise; see the README for the list of TODOs.
- */
+const TYPING_IDLE_MS = 1500;
+
 export default function ChatPanel({
   username,
   room,
+  messages,
+  typingLabel,
+  error,
   onLeave,
+  onSendMessage,
+  onTypingStart,
+  onTypingStop,
+  onDismissError,
 }: Props): JSX.Element {
   const [draft, setDraft] = useState("");
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-  function handleSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (draft.trim().length === 0) return;
-    // TODO (hands-on): emit SOCKET_EVENTS.SEND_MESSAGE with
-    //   { room, username, text: draft.trim() }
-    setDraft("");
+  useEffect(() => {
+    const node = listRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (isTypingRef.current) onTypingStop();
+    };
+  }, [onTypingStop]);
+
+  function fireTypingStopSoon() {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop();
+      }
+    }, TYPING_IDLE_MS);
   }
 
   function handleDraftChange(value: string) {
     setDraft(value);
-    // TODO (hands-on, optional): emit SOCKET_EVENTS.TYPING_STARTED while typing,
-    // then SOCKET_EVENTS.TYPING_STOPPED after a short pause / on send.
+    if (value.trim().length === 0) {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTypingStop();
+      }
+      return;
+    }
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      onTypingStart();
+    }
+    fireTypingStopSoon();
+  }
+
+  function handleSend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const text = draft.trim();
+    if (text.length === 0) return;
+    onSendMessage(text);
+    setDraft("");
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onTypingStop();
+    }
   }
 
   return (
@@ -46,21 +104,32 @@ export default function ChatPanel({
         </button>
       </div>
 
-      <div className="messages">
-        {/* TODO (hands-on): render messages received via SOCKET_EVENTS.NEW_MESSAGE */}
-        <div className="message message--system">
-          No messages yet. The chat events are not wired up in this branch —
-          implement them as part of the lecture exercise.
+      <div className="messages" ref={listRef}>
+        {messages.map((m) =>
+          m.kind === "system" ? (
+            <div key={m.id} className="message message--system">
+              {m.text}
+            </div>
+          ) : (
+            <div key={m.id} className="message">
+              <div className="message__meta">
+                <strong>{m.username}</strong>
+                {" · "}
+                {new Date(m.createdAt).toLocaleTimeString()}
+              </div>
+              <div className="message__text">{m.text}</div>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="typing">{typingLabel}</div>
+
+      {error ? (
+        <div className="error" role="alert" onClick={onDismissError}>
+          {error} <span style={{ opacity: 0.7 }}>(click to dismiss)</span>
         </div>
-      </div>
-
-      <div className="typing">
-        {/* TODO (hands-on, optional): show "alice is typing..." when other
-            users in the room emit SOCKET_EVENTS.TYPING_STARTED. */}
-      </div>
-
-      {/* TODO (hands-on): render an error banner when the server emits
-          SOCKET_EVENTS.ERROR_MESSAGE. */}
+      ) : null}
 
       <form className="composer" onSubmit={handleSend}>
         <input

@@ -2,13 +2,15 @@ import { useState, type FormEvent } from "react";
 
 type Props = {
   onJoin: (values: { username: string; room: string }) => void;
+  disabled?: boolean;
 };
 
-export default function JoinForm({ onJoin }: Props): JSX.Element {
+export default function JoinForm({ onJoin, disabled }: Props): JSX.Element {
   const [username, setUsername] = useState("");
   const [room, setRoom] = useState("");
 
-  const canSubmit = username.trim().length > 0 && room.trim().length > 0;
+  const canSubmit =
+    !disabled && username.trim().length > 0 && room.trim().length > 0;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,6 +45,9 @@ export default function JoinForm({ onJoin }: Props): JSX.Element {
       <button type="submit" disabled={!canSubmit}>
         Join room
       </button>
+      {disabled ? (
+        <span className="typing">Waiting for server connection...</span>
+      ) : null}
     </form>
   );
 }

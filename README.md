@@ -1,9 +1,9 @@
-# Socket.IO Chat — Lecture Project
+# Socket.IO Chat — Lecture Project (final)
 
-A small real-time chat application built as a TypeScript monorepo. It is
-designed for a hands-on WebSockets / Socket.IO lecture: the `start`
-branch contains the scaffolding (UI, server, shared types, dependencies)
-and the `final` branch contains the completed implementation.
+A small real-time chat application built as a TypeScript monorepo. This
+is the **completed** branch: the chat events are fully wired up so you
+can use it as a reference after working through the exercise on
+[`start`](https://github.com/LaNguAx/chat-app-lecture/tree/start).
 
 ```
 apps/
@@ -18,14 +18,8 @@ packages/
 | Branch  | Use for                                                       |
 | ------- | ------------------------------------------------------------- |
 | `main`  | Same as `start`. The initial state of the project.            |
-| `start` | **Where students begin.** Setup + UI shell, no chat logic yet. |
-| `final` | Completed real-time chat. Use for reference after the session. |
-
-Switch to the starting point:
-
-```bash
-git checkout start
-```
+| `start` | Student starting point. Setup + UI shell, no chat logic yet.  |
+| `final` | **This branch.** Completed real-time chat.                    |
 
 ## Requirements
 
@@ -34,13 +28,11 @@ git checkout start
 
 ## Install
 
-From the repo root (npm workspaces install every workspace at once):
-
 ```bash
 npm install
 ```
 
-## Run (frontend + backend together)
+## Run
 
 ```bash
 cp .env.example .env
@@ -49,15 +41,7 @@ npm run dev
 
 - Backend listens on `http://localhost:3000`
 - Frontend listens on `http://localhost:5173`
-- Open the frontend in two browser tabs to chat with yourself once the
-  events are implemented.
-
-To run them independently:
-
-```bash
-npm run dev:server
-npm run dev:client
-```
+- Open two browser tabs to chat with yourself.
 
 ## Environment variables
 
@@ -77,40 +61,31 @@ npm run build        # type-check + build both apps
 npm run typecheck    # type-check shared, server, and client
 ```
 
-## Hands-on TODOs
+## What's implemented
 
-In the exercise, we will implement:
+End-to-end with Socket.IO rooms:
 
-- Client emits `join_room`
-- Server listens to `join_room`
-- Server joins the socket into a Socket.IO room
-- Client emits `send_message`
-- Server broadcasts `new_message` to the room
-- Client listens for `new_message`
-- Server handles disconnects (broadcasts `user_left`)
-- Server broadcasts `user_joined` to the room
-- Optional: typing indicators (`typing_started` / `typing_stopped`)
-- Optional: simple error feedback via `error_message`
+- Connection status (connected / connecting / disconnected).
+- `join_room`: client emits, server validates, joins the Socket.IO room,
+  stores `{ username, room }` on the socket, replies with `room_joined`,
+  broadcasts `user_joined` to other room members.
+- `send_message`: client emits, server validates against the stored
+  session, creates a `ChatMessage` with `id` + `createdAt`, broadcasts
+  `new_message` to everyone in the room.
+- `user_left`: broadcast on disconnect or when the user joins a different
+  room (a socket is only ever in one room at a time).
+- `typing_started` / `typing_stopped`: simple typing indicator with a
+  client-side idle timeout.
+- `error_message`: server reports validation errors back to the offending
+  client; the UI surfaces them in an error banner.
 
-All of the event names and payload types are already defined in
-[`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts);
-the goal of the lecture is to wire them up on both sides.
+Event names and payload types live in
+[`packages/shared/src/socket-events.ts`](packages/shared/src/socket-events.ts)
+and are imported on both sides, so the contract is the same on the wire.
 
-Where to look:
+## Where the code lives
 
 - Client socket setup: [`apps/client/src/lib/socket.ts`](apps/client/src/lib/socket.ts)
-- Client UI: [`apps/client/src/App.tsx`](apps/client/src/App.tsx) and `apps/client/src/components/`
-- Server socket setup: [`apps/server/src/socket.ts`](apps/server/src/socket.ts)
-
-Each of these files contains `TODO (hands-on)` comments pointing at the
-exact piece of logic you'll implement during the session.
-
-## After the session
-
-```bash
-git checkout final
-npm install
-npm run dev
-```
-
-Then compare your code against the `final` branch.
+- Client UI + state: [`apps/client/src/App.tsx`](apps/client/src/App.tsx) and `apps/client/src/components/`
+- Server socket handlers: [`apps/server/src/socket.ts`](apps/server/src/socket.ts)
+- Server HTTP + boot: [`apps/server/src/app.ts`](apps/server/src/app.ts), [`apps/server/src/index.ts`](apps/server/src/index.ts)
